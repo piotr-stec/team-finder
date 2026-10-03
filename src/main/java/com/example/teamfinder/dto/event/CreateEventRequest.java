@@ -30,6 +30,7 @@ public class CreateEventRequest {
     @Schema(example = "2025-08-15T10:00:00", description = "ISO 8601 date-time")
     private LocalDateTime eventDateTime;
 
+    @NotNull(message = "Max participants is required")
     @Min(value = 2, message = "At least 2 participants required")
     @Max(value = 100, message = "Maximum 100 participants allowed")
     @Schema(example = "10")
