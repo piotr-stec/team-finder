@@ -101,7 +101,7 @@ class EventServiceTest {
                 return e;
             });
 
-            EventResponse response = eventService.createEvent(request, organizer);
+            EventResponse response = eventService.createEvent(request, organizer, true);
 
             assertThat(response.getTitle()).isEqualTo("Sunday Match");
             assertThat(response.getSport()).isEqualTo(SportType.BASKETBALL);
@@ -118,7 +118,7 @@ class EventServiceTest {
         @Test
         @DisplayName("Should allow participant to join open event")
         void shouldJoinEvent() {
-            when(eventRepository.findById(event.getId())).thenReturn(Optional.of(event));
+            when(eventRepository.findByIdForUpdate(event.getId())).thenReturn(Optional.of(event));
             when(eventRepository.save(any(Event.class))).thenReturn(event);
 
             EventResponse response = eventService.joinEvent(event.getId(), participant);
@@ -138,7 +138,7 @@ class EventServiceTest {
                         .build());
             }
             event.updateStatus();
-            when(eventRepository.findById(event.getId())).thenReturn(Optional.of(event));
+            when(eventRepository.findByIdForUpdate(event.getId())).thenReturn(Optional.of(event));
 
             assertThatThrownBy(() -> eventService.joinEvent(event.getId(), participant))
                     .isInstanceOf(EventFullException.class);
@@ -148,26 +148,18 @@ class EventServiceTest {
         @DisplayName("Should throw AlreadyRegisteredException when already joined")
         void shouldThrowWhenAlreadyJoined() {
             event.getParticipants().add(participant);
-            when(eventRepository.findById(event.getId())).thenReturn(Optional.of(event));
+            when(eventRepository.findByIdForUpdate(event.getId())).thenReturn(Optional.of(event));
 
             assertThatThrownBy(() -> eventService.joinEvent(event.getId(), participant))
                     .isInstanceOf(AlreadyRegisteredException.class);
         }
 
-        @Test
-        @DisplayName("Should throw BadRequestException when organizer tries to join own event")
-        void shouldThrowWhenOrganizerJoinsOwnEvent() {
-            when(eventRepository.findById(event.getId())).thenReturn(Optional.of(event));
-
-            assertThatThrownBy(() -> eventService.joinEvent(event.getId(), organizer))
-                    .isInstanceOf(BadRequestException.class);
-        }
 
         @Test
         @DisplayName("Should throw BadRequestException when event is cancelled")
         void shouldThrowWhenEventCancelled() {
             event.setStatus(EventStatus.CANCELLED);
-            when(eventRepository.findById(event.getId())).thenReturn(Optional.of(event));
+            when(eventRepository.findByIdForUpdate(event.getId())).thenReturn(Optional.of(event));
 
             assertThatThrownBy(() -> eventService.joinEvent(event.getId(), participant))
                     .isInstanceOf(BadRequestException.class);
@@ -182,7 +174,7 @@ class EventServiceTest {
         @DisplayName("Should allow participant to leave event")
         void shouldLeaveEvent() {
             event.getParticipants().add(participant);
-            when(eventRepository.findById(event.getId())).thenReturn(Optional.of(event));
+            when(eventRepository.findByIdForUpdate(event.getId())).thenReturn(Optional.of(event));
             when(eventRepository.save(any(Event.class))).thenReturn(event);
 
             eventService.leaveEvent(event.getId(), participant);
@@ -193,7 +185,7 @@ class EventServiceTest {
         @Test
         @DisplayName("Should throw BadRequestException when not registered")
         void shouldThrowWhenNotRegistered() {
-            when(eventRepository.findById(event.getId())).thenReturn(Optional.of(event));
+            when(eventRepository.findByIdForUpdate(event.getId())).thenReturn(Optional.of(event));
 
             assertThatThrownBy(() -> eventService.leaveEvent(event.getId(), participant))
                     .isInstanceOf(BadRequestException.class);
@@ -210,7 +202,7 @@ class EventServiceTest {
             UpdateEventRequest request = new UpdateEventRequest();
             request.setTitle("Updated Title");
 
-            when(eventRepository.findById(event.getId())).thenReturn(Optional.of(event));
+            when(eventRepository.findByIdForUpdate(event.getId())).thenReturn(Optional.of(event));
             when(eventRepository.save(any(Event.class))).thenReturn(event);
 
             EventResponse response = eventService.updateEvent(event.getId(), request, organizer);
@@ -224,7 +216,7 @@ class EventServiceTest {
             UpdateEventRequest request = new UpdateEventRequest();
             request.setTitle("Hack title");
 
-            when(eventRepository.findById(event.getId())).thenReturn(Optional.of(event));
+            when(eventRepository.findByIdForUpdate(event.getId())).thenReturn(Optional.of(event));
 
             assertThatThrownBy(() -> eventService.updateEvent(event.getId(), request, participant))
                     .isInstanceOf(ForbiddenException.class);
@@ -253,7 +245,7 @@ class EventServiceTest {
         @Test
         @DisplayName("Should set status to CANCELLED")
         void shouldCancelEvent() {
-            when(eventRepository.findById(event.getId())).thenReturn(Optional.of(event));
+            when(eventRepository.findByIdForUpdate(event.getId())).thenReturn(Optional.of(event));
             when(eventRepository.save(any(Event.class))).thenReturn(event);
 
             eventService.cancelEvent(event.getId(), organizer);
@@ -265,7 +257,7 @@ class EventServiceTest {
         @DisplayName("Should throw BadRequestException when already cancelled")
         void shouldThrowWhenAlreadyCancelled() {
             event.setStatus(EventStatus.CANCELLED);
-            when(eventRepository.findById(event.getId())).thenReturn(Optional.of(event));
+            when(eventRepository.findByIdForUpdate(event.getId())).thenReturn(Optional.of(event));
 
             assertThatThrownBy(() -> eventService.cancelEvent(event.getId(), organizer))
                     .isInstanceOf(BadRequestException.class);

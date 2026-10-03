@@ -61,7 +61,7 @@ public class EventService {
     // ─── Write operations ───────────────────────────────────────────────────────
 
     @Transactional
-    public EventResponse createEvent(CreateEventRequest request, User organizer) {
+    public EventResponse createEvent(CreateEventRequest request, User organizer, boolean joinOrganizer) {
         Event event = Event.builder()
                 .title(request.getTitle())
                 .sport(request.getSport())
@@ -73,6 +73,10 @@ public class EventService {
                 .status(EventStatus.OPEN)
                 .build();
 
+        if (joinOrganizer){
+            event.getParticipants().add(organizer);
+        }
+
         event = eventRepository.save(event);
         log.info("Event created: {} by user: {}", event.getId(), organizer.getUsername());
         return toEventResponse(event);
@@ -80,7 +84,7 @@ public class EventService {
 
     @Transactional
     public EventResponse updateEvent(UUID id, UpdateEventRequest request, User currentUser) {
-        Event event = findEventById(id);
+        Event event = findEventByIdForUpdate(id);
         assertIsOrganizer(event, currentUser);
 
         if (event.getStatus() == EventStatus.CANCELLED) {
@@ -109,7 +113,7 @@ public class EventService {
 
     @Transactional
     public void cancelEvent(UUID id, User currentUser) {
-        Event event = findEventById(id);
+        Event event = findEventByIdForUpdate(id);
         assertIsOrganizer(event, currentUser);
 
         if (event.getStatus() == EventStatus.CANCELLED) {
@@ -123,7 +127,7 @@ public class EventService {
 
     @Transactional
     public void deleteEvent(UUID id, User currentUser) {
-        Event event = findEventById(id);
+        Event event = findEventByIdForUpdate(id);
         // Admin can delete any event; organizer can delete their own
         boolean isAdmin = currentUser.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
@@ -138,7 +142,7 @@ public class EventService {
 
     @Transactional
     public EventResponse joinEvent(UUID eventId, User user) {
-        Event event = findEventById(eventId);
+        Event event = findEventByIdForUpdate(eventId);
 
         if (event.getStatus() == EventStatus.CANCELLED) {
             throw new BadRequestException("Cannot join a cancelled event");
@@ -146,9 +150,7 @@ public class EventService {
         if (event.getStatus() == EventStatus.FULL || event.isFull()) {
             throw new EventFullException();
         }
-        if (event.getOrganizer().getId().equals(user.getId())) {
-            throw new BadRequestException("Organizer cannot join their own event as participant");
-        }
+
         if (event.getParticipants().contains(user)) {
             throw new AlreadyRegisteredException("You are already registered for this event");
         }
@@ -162,7 +164,7 @@ public class EventService {
 
     @Transactional
     public EventResponse leaveEvent(UUID eventId, User user) {
-        Event event = findEventById(eventId);
+        Event event = findEventByIdForUpdate(eventId);
 
         if (!event.getParticipants().contains(user)) {
             throw new BadRequestException("You are not registered for this event");
@@ -182,6 +184,11 @@ public class EventService {
 
     private Event findEventById(UUID id) {
         return eventRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Event", id));
+    }
+
+    private Event findEventByIdForUpdate(UUID id) {
+        return eventRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Event", id));
     }
 
