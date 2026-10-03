@@ -76,9 +76,11 @@ public class EventController {
     @Operation(summary = "Create a new sports event")
     public ResponseEntity<EventResponse> createEvent(
             @Valid @RequestBody CreateEventRequest request,
-            @AuthenticationPrincipal User currentUser) {
+            @AuthenticationPrincipal User currentUser,
+            @RequestParam(defaultValue = "true") boolean joinOrganizer
+            ) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(eventService.createEvent(request, currentUser));
+                .body(eventService.createEvent(request, currentUser, joinOrganizer));
     }
 
     @PutMapping("/{id}")
